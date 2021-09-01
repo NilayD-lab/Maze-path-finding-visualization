@@ -126,7 +126,7 @@ public class Maze {
         VBox vbox = new VBox();
         vbox.setSpacing(10);
         pane.setRight(vbox);
-        Text slow = new Text(slider.getLayoutX(), slider.getLayoutY(), "me                               fast");
+        Text slow = new Text(slider.getLayoutX(), slider.getLayoutY(), "slow                               fast");
         Button maze = new Button("Make Maze");
         maze.setOnAction(e->{
             clear();
