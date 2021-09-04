@@ -106,7 +106,7 @@ public class Maze {
             endRectsList.clear();
             for (int r=0;r<rects.length;r++){
                 for (int c=0;c<rects[r].length;c++){
-                    if (rects[r][c].getFill()!=borderColor && rects[r][c].getFill()!=startColor && rects[r][c].getFill()!=endColor){
+                    if (!isBorder(rects[r][c]) && !isStartNode(rects[r][c]) && !isEndNode(rects[r][c])){
                         rects[r][c].setFill(backgroundColor);
                     }
                 }
@@ -402,15 +402,15 @@ public class Maze {
 
                     for (int r=0;r<rects.length;r++){
                         for (int c=0;c<rects[r].length;c++){
-                            if (rects[r][c].getFill()!=borderColor && rects[r][c].getFill()!=startColor && rects[r][c].getFill()!=endColor){
+                            if (!isBorder(rects[r][c]) && !isStartNode(rects[r][c]) && !isEndNode(rects[r][c])){
                                 rects[r][c].setFill(backgroundColor);
                             }
                         }
                     }
-                    ArrayList<Rect> borderList = new ArrayList<>(findRects(borderColor));
-                    ArrayList<Rect> backgroundList = new ArrayList<>(findRects(backgroundColor));
-                    ArrayList<Rect> startList = new ArrayList<>(findRects(startColor));
-                    ArrayList<Rect> endList = new ArrayList<>(findRects(endColor));
+                    ArrayList<Rect> borderList = new ArrayList<>(findRects("Border"));
+                    ArrayList<Rect> backgroundList = new ArrayList<>(findRects("Background"));
+                    ArrayList<Rect> startList = new ArrayList<>(findRects("Start"));
+                    ArrayList<Rect> endList = new ArrayList<>(findRects("End"));
                     borderColor = Color.web(borderInput.getText());
                     backgroundColor = Color.web(backgroundInput.getText());
                     startColor = Color.web(startInput.getText());
@@ -432,11 +432,20 @@ public class Maze {
         stage.setScene(scene);
         stage.showAndWait();
     }
-    public ArrayList<Rect> findRects(Color color){
+    public ArrayList<Rect> findRects(String rect){
         ArrayList<Rect> list = new ArrayList<>();
         for (int r=0;r<rects.length;r++){
             for (int c=0;c<rects[r].length;c++){
-                if (rects[r][c].getFill()==color){
+                if (rect.equals("Border") && isBorder(rects[r][c])){
+                    list.add(rects[r][c]);
+                }
+                if (rect.equals("Background") && isBackground(rects[r][c])){
+                    list.add(rects[r][c]);
+                }
+                if (rect.equals("Start") && isStartNode(rects[r][c])){
+                    list.add(rects[r][c]);
+                }
+                if (rect.equals("End") && isEndNode(rects[r][c])){
                     list.add(rects[r][c]);
                 }
             }
@@ -460,6 +469,9 @@ public class Maze {
         for (int r=0;r<row;r++){
             for (int c=0;c<col;c++){
                 rects[r][c] = new Rect(borderColor, backgroundColor, Integer.MAX_VALUE, scene, c*squareLength, (r)*squareLength+25, squareLength);
+                rects[r][c].setOnColor(borderColor);
+                rects[r][c].setOffColor(backgroundColor);
+                rects[r][c].setOn(false);
                 rects[r][c].setColor();
                 pane.getChildren().add(rects[r][c]);
                 num++;
@@ -478,7 +490,7 @@ public class Maze {
     }
     public void play(String choice){
         if (choice.equals("Dijkstra's")){
-            dijkstraAlgoth();
+            dijkstraAlgorithm();
         }
         if (choice.equals("A*")){
             aStarAlgorithm();
@@ -516,23 +528,12 @@ public class Maze {
 
         }
         if (!options){
-            //System.out.println(options);
             if (index==0){
                 return;
             }
-            //System.out.println(rectsList.get(index-1).getR()+ " "+ rectsList.get(index-1).getC() +" "+(index-1));
-            //System.out.println(rectsList.get(index));
             recursiveBackTracking(rectsList.get(index-1).getR(), rectsList.get(index-1).getC(), index-1);
         }
         else {
-            /*
-            if (!rectsList.contains(rects[row][col])) {
-                pathList.add(rects[row][col]);
-                rectsList.add(rects[row][col]);
-            }
-            visited[row][col] = true;
-
-             */
             while (notFound) {
                 num = (int) (Math.random()*4);
                 if (num == 0 && row != 1 && !visited[row - 2][col]) {
@@ -580,6 +581,7 @@ public class Maze {
                         return;
                     }
                     pathList.get(seconds).setFill(backgroundColor);
+                    pathList.get(seconds).setOn(false);
                     seconds++;
                 }
                 else {
@@ -590,6 +592,11 @@ public class Maze {
                     else {
                         for (int i = 0; i < groupList.get(seconds).size(); i++) {
                             groupList.get(seconds).get(i).setFill(borderColor);
+                            groupList.get(seconds).get(i).setOnColor(borderColor);
+                            groupList.get(seconds).get(i).setOffColor(backgroundColor);
+                            groupList.get(seconds).get(i).setIsStart(false);
+                            groupList.get(seconds).get(i).setIsEnd(false);
+                            groupList.get(seconds).get(i).setOn(true);
                         }
                         seconds++;
                     }
@@ -604,7 +611,7 @@ public class Maze {
         return Math.abs(r-startNodeRow) + Math.abs(c-startNodeCol);
     }
     public boolean searchAStar(int row, int col){
-        if (rects[row][col].getFill()==startColor) {
+        if (isStartNode(rects[row][col])) {
             return true;
         }
         pathList.add(rects[row][col]);
@@ -621,13 +628,13 @@ public class Maze {
     }
 
     public boolean isValid(int r, int c){
-        return notOutOfBounds(r, c) && (rects[r][c].getFill()==backgroundColor || rects[r][c].getFill()==endColor) && !rectsList.contains(rects[r][c]);
+        return notOutOfBounds(r, c) && (isBackground(rects[r][c]) || isEndNode(rects[r][c])) && !rectsList.contains(rects[r][c]);
     }
     public boolean isBiValidStart(int r, int c){
-        return notOutOfBounds(r, c) && (rects[r][c].getFill()==backgroundColor) && !rectsList.contains(rects[r][c]) ;
+        return notOutOfBounds(r, c) && (isBackground(rects[r][c]) && !rectsList.contains(rects[r][c])) ;
     }
     public boolean isBiValidEnd(int r, int c){
-        return  notOutOfBounds(r, c) && rects[r][c].getFill()==backgroundColor && !endRectsList.contains(rects[r][c]);
+        return  notOutOfBounds(r, c) && isBackground(rects[r][c]) && !endRectsList.contains(rects[r][c]);
     }
     public boolean notOutOfBoundsRec(int r, int c){
         return r<row-1 && c<col-1 && r>=1 && c>=1;
@@ -731,17 +738,17 @@ public class Maze {
         ArrayList<Rect> rectsListTemp = new ArrayList<>();
         for (int r=0;r<rects.length;r++){
             for (int c=0;c<rects[r].length;c++){
-                if (rects[r][c].getFill()==startColor){
+                if (isStartNode(rects[r][c])){
                     startNodeRow=r;
                     startNodeCol=c;
                     board[r][c] = -1;
                 }
-                if (rects[r][c].getFill()==endColor){
+                if (isEndNode(rects[r][c])){
                     endNodeRow=r;
                     endNodeCol=c;
                     board[r][c] = -1;
                 }
-                if (rects[r][c].getFill()!=borderColor && rects[r][c].getFill()!=startColor && rects[r][c].getFill()!=endColor){
+                if (!isBorder(rects[r][c]) && !isStartNode(rects[r][c]) && !isEndNode(rects[r][c])){
                     rects[r][c].setFill(backgroundColor);
                 }
             }
@@ -985,31 +992,31 @@ public class Maze {
             search(foundRow, foundCol, startNodeRow, startNodeCol, board[foundRow][foundCol], board, rectsList);
             pathList.add(rects[foundRow2][foundCol2]);
             search(foundRow2, foundCol2, endNodeRow, endNodeCol, board[foundRow2][foundCol2], board, endRectsList);
-        }
-        thing =-1;
-        for (int i=0;i<pathList.size();i++){
-            if (pathList.get(i)==rects[foundRow2][foundCol2]){
-                thing = i;
-                break;
+
+            thing = -1;
+            for (int i = 0; i < pathList.size(); i++) {
+                if (pathList.get(i) == rects[foundRow2][foundCol2]) {
+                    thing = i;
+                    break;
+                }
             }
-        }
-        for (int i=thing;i<pathList.size();i++){
-            temp.add(pathList.remove(i));
-            i--;
-        }
-        thing =0;
-        if (pathList.size()>temp.size()) {
-            for (int i = 1; i < pathList.size(); i += 2) {
-                pathList.add(i, temp.get(thing));
-                thing++;
+            for (int i = thing; i < pathList.size(); i++) {
+                temp.add(pathList.remove(i));
+                i--;
             }
-        }
-        else {
-            for (int i = 1; i < temp.size(); i += 2) {
-                temp.add(i, pathList.get(thing));
-                thing++;
+            thing = 0;
+            if (pathList.size() > temp.size()) {
+                for (int i = 1; i < pathList.size(); i += 2) {
+                    pathList.add(i, temp.get(thing));
+                    thing++;
+                }
+            } else {
+                for (int i = 1; i < temp.size(); i += 2) {
+                    temp.add(i, pathList.get(thing));
+                    thing++;
+                }
+                pathList = new ArrayList<>(temp);
             }
-            pathList = new ArrayList<>(temp);
         }
         final boolean found = foundEndnode;
         seconds=0;
@@ -1057,7 +1064,7 @@ public class Maze {
     public ArrayList<Rect> copy(ArrayList<Rect> list){
         return new ArrayList<>(list);
     }
-    public void dijkstraAlgoth(){
+    public void dijkstraAlgorithm(){
         ArrayList<Rect> closed = new ArrayList<>();
         pathList.clear();
         finished = false;
@@ -1073,14 +1080,15 @@ public class Maze {
         boolean foundEndnode = false;
         for (int r=0;r<rects.length;r++){
             for (int c=0;c<rects[r].length;c++){
-                if (rects[r][c].getOnColor()==startColor && rects[r][c].getOffColor()==startColor){
+                if (isStartNode(rects[r][c])){
                     startNodeRow=r;
                     startNodeCol=c;
                     rectsList.add(rects[r][c]);
                     rects[r][c].setNum(0);
                 }
-                if (rects[r][c].getFill()!=borderColor && rects[r][c].getFill()!=startColor && rects[r][c].getFill()!=endColor){
+                if (!isBorder(rects[r][c]) && !isStartNode(rects[r][c]) && !isEndNode(rects[r][c])){
                     rects[r][c].setFill(backgroundColor);
+                    rects[r][c].setOn(false);
                 }
             }
         }
@@ -1096,7 +1104,7 @@ public class Maze {
                     r = rectsList.get(i).getR();
                     c = rectsList.get(i).getC();
                     if (isValid(r - 1, c)) {
-                        if (rects[r - 1][c].getOnColor() == endColor && rects[r - 1][c].getOffColor() == endColor) {
+                        if (isEndNode(rects[r - 1][c])) {
                             foundEndnode = true;
                             endNodeRow = r - 1;
                             endNodeCol = c;
@@ -1108,7 +1116,7 @@ public class Maze {
                         }
                     }
                     if (isValid(r, c + 1)) {
-                        if (rects[r][c + 1].getOnColor() == endColor && rects[r][c + 1].getOffColor() == endColor) {
+                        if (isEndNode(rects[r][c + 1])) {
                             foundEndnode = true;
                             endNodeRow = r;
                             endNodeCol = c + 1;
@@ -1120,7 +1128,7 @@ public class Maze {
                         }
                     }
                     if (isValid(r + 1, c)) {
-                        if (rects[r + 1][c].getOnColor() == endColor && rects[r + 1][c].getOffColor() == endColor) {
+                        if (isEndNode(rects[r + 1][c])) {
                             foundEndnode = true;
                             endNodeRow = r + 1;
                             endNodeCol = c;
@@ -1132,7 +1140,7 @@ public class Maze {
                         }
                     }
                     if (isValid(r, c - 1)) {
-                        if (rects[r][c - 1].getOnColor() == endColor && rects[r][c - 1].getOffColor() == endColor) {
+                        if (isEndNode(rects[r][c - 1])) {
                             foundEndnode = true;
                             endNodeRow = r;
                             endNodeCol = c - 1;
@@ -1148,6 +1156,11 @@ public class Maze {
             }
             for (int z=0;z<temp.size();z++){
                 rectsList.add(temp.get(z));
+            }
+            sizes.add(rectsList.size());
+            if (stuck(sizes)){
+                rectsList.add(null);
+                break;
             }
             temp.clear();
         }
@@ -1168,13 +1181,13 @@ public class Maze {
             @Override
             public void run() {
                 if (seconds==rectsList.size()){
-                    if (rectsList.get(seconds-1)==null){
-                        System.out.println("bro, maze no bueno");
-                        ses.shutdown();
-                        return;
-                    }
                     finished=true;
                     seconds = pathList.size()-1;
+                }
+                if (rectsList.get(seconds)==null){
+                    System.out.println("bro, maze no bueno");
+                    ses.shutdown();
+                    return;
                 }
                 if (finished){
                     if (seconds<0){
@@ -1182,7 +1195,7 @@ public class Maze {
                         ses.shutdown();
                         return;
                     }
-                    if (pathList.get(seconds).getFill()!=endColor) {
+                    if (!isEndNode(pathList.get(seconds))) {
                         pathList.get(seconds).setFill(pathColor);
                     }
                     seconds--;
@@ -1197,181 +1210,7 @@ public class Maze {
 
 
     }
-    public void dijkstraAlgorithm(){
-        ArrayList<Rect> open = new ArrayList<>();
-        pathList.clear();
-        finished = false;
-        int[][] board = new int[row][col];
-        int endNodeRow=0;
-        int endNodeCol=0;
-        int startNodeRow=0;
-        int startNodeCol=0;
-        sizes.clear();
-        rectsList.clear();
-        seconds=1;
-        boolean foundEndnode = false;
-        ArrayList<Rect> rectsListTemp = new ArrayList<>();
-        for (int r=0;r<rects.length;r++){
-            for (int c=0;c<rects[r].length;c++){
-                if (rects[r][c].getOnColor()==startColor && rects[r][c].getOffColor()==startColor){
-                    startNodeRow=r;
-                    startNodeCol=c;
 
-                }
-                if (rects[r][c].getFill()!=borderColor && rects[r][c].getFill()!=startColor && rects[r][c].getFill()!=endColor){
-                    rects[r][c].setFill(backgroundColor);
-                }
-            }
-        }
-        for (int i=0;i<1;i++) {
-            if (isValid(startNodeRow - 1, startNodeCol)) {
-                if (rects[startNodeRow - 1][startNodeCol].getFill()==endColor){
-                    foundEndnode=true;
-                    break;
-                }
-                rectsListTemp.add(rects[startNodeRow - 1][startNodeCol]);
-                board[startNodeRow-1][startNodeCol] = seconds;
-            }
-            if (isValid(startNodeRow, startNodeCol + 1)) {
-                if (rects[startNodeRow][startNodeCol+1].getFill()==endColor){
-                    foundEndnode=true;
-                    break;
-                }
-                rectsListTemp.add(rects[startNodeRow][startNodeCol + 1]);
-                board[startNodeRow][startNodeCol+1] = seconds;
-            }
-            if (isValid(startNodeRow + 1, startNodeCol)) {
-                if (rects[startNodeRow + 1][startNodeCol].getFill()==endColor){
-                    foundEndnode=true;
-                    break;
-                }
-                rectsListTemp.add(rects[startNodeRow + 1][startNodeCol]);
-                board[startNodeRow+1][startNodeCol] = seconds;
-            }
-            if (isValid(startNodeRow, startNodeCol - 1)) {
-                if (rects[startNodeRow][startNodeCol - 1].getFill()==endColor){
-                    foundEndnode=true;
-                    break;
-                }
-                rectsListTemp.add(rects[startNodeRow][startNodeCol - 1]);
-                board[startNodeRow][startNodeCol-1] = seconds;
-            }
-
-        }
-        if (!foundEndnode) {
-            rectsList = new ArrayList<>(rectsListTemp);
-            sizes.add(rectsList.size());
-        }
-        if (sizes.contains(0)){
-            rectsList.add(null);
-            foundEndnode=true;
-        }
-        while(!foundEndnode) {
-            seconds++;
-            for (int r = 0; r < rects.length && !foundEndnode; r++) {
-                for (int c = 0; c < rects[r].length; c++) {
-                    if (rectsList.contains(rects[r][c])) {
-                        if (isValid(r - 1, c)) {
-                            if (rects[r-1][c].getFill()==endColor){
-                                foundEndnode=true;
-                                endNodeRow = r-1;
-                                endNodeCol = c;
-                                break;
-                            }
-                            rectsListTemp.add(rects[r - 1][c]);
-                            board[r-1][c] = seconds;
-                        }
-                        if (isValid(r, c + 1)) {
-                            if (rects[r][c+1].getFill()==endColor){
-                                foundEndnode=true;
-                                endNodeRow = r;
-                                endNodeCol = c+1;
-                                break;
-                            }
-                            rectsListTemp.add(rects[r][c+1]);
-                            board[r][c+1] = seconds;
-                        }
-                        if (isValid(r + 1, c)) {
-                            if (rects[r+1][c].getFill()==endColor){
-                                foundEndnode=true;
-                                endNodeRow = r+1;
-                                endNodeCol = c;
-                                break;
-                            }
-                            rectsListTemp.add(rects[r + 1][c]);
-                            board[r+1][c] = seconds;
-                        }
-                        if (isValid(r, c - 1)) {
-                            if (rects[r][c-1].getFill()==endColor){
-                                foundEndnode=true;
-                                endNodeRow = r;
-                                endNodeCol = c-1;
-                                break;
-                            }
-                            rectsListTemp.add(rects[r][c - 1]);
-                            board[r][c-1] = seconds;
-                        }
-
-                    }
-
-                }
-            }
-            for (int i=0;i<rectsListTemp.size();i++){
-                if(!rectsList.contains(rectsListTemp.get(i))){
-                    rectsList.add(rectsListTemp.get(i));
-                }
-            }
-            sizes.add(rectsList.size());
-            if (sizes.get(sizes.size()-1).equals(sizes.get(sizes.size()-2)) && !foundEndnode){
-                rectsList.add(null);
-                break;
-            }
-        }
-        search(endNodeRow, endNodeCol, startNodeRow, startNodeCol, seconds, board);
-        System.out.println(pathList);
-        seconds=0;
-        ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
-        ses.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                if (seconds==rectsList.size()-1){
-                    if (rectsList.get(seconds)==null){
-                        System.out.println("bro, maze no bueno");
-                        ses.shutdown();
-                        return;
-                    }
-                    finished=true;
-                    seconds = pathList.size()-1;
-                }
-                if (finished){
-                    if (seconds<0){
-                        System.out.println("done");
-                        ses.shutdown();
-                        return;
-                    }
-                    if (pathList.get(seconds).getFill()!=endColor) {
-                        pathList.get(seconds).setFill(pathColor);
-                    }
-                    seconds--;
-                }
-                else {
-                    rectsList.get(seconds).setFill(fillColor);
-                    seconds++;
-                }
-            }
-            public void bruhMoment(){
-                Stage stage=new Stage();
-                //stage.initModality(Modality.APPLICATION_MODAL);
-                Pane pane = new Pane();
-                Text text= new Text(80, 100,"bro, maze no bueno");
-                text.setFont(new Font(16));
-                pane.getChildren().add(text);
-                Scene scene = new Scene(pane, 300, 200);
-                stage.setScene(scene);
-                stage.showAndWait();
-            }
-        }, 0, 1001-(long)slider.getValue(), TimeUnit.MILLISECONDS);
-    }
     public void aStarAlgorithm(){
         ArrayList<Rect> open = new ArrayList<>();
         ArrayList<Rect> closed = new ArrayList<>();
@@ -1389,7 +1228,7 @@ public class Maze {
         ArrayList<Rect> rectsListTemp = new ArrayList<>();
         for (int r=0;r<rects.length;r++){
             for (int c=0;c<rects[r].length;c++){
-                if (rects[r][c].getFill()==startColor){
+                if (isStartNode(rects[r][c])){
                     startNodeRow=r;
                     startNodeCol=c;
                     rects[r][c].setG(0);
@@ -1397,12 +1236,13 @@ public class Maze {
                     rects[r][c].setNum(rects[r][c].getG()+rects[r][c].getH());
                     open.add(rects[r][c]);
                 }
-                if (rects[r][c].getFill()==endColor){
+                if (isEndNode(rects[r][c])){
                     endNodeRow=r;
                     endNodeCol=c;
                 }
-                if (rects[r][c].getFill()!=borderColor && rects[r][c].getFill()!=startColor && rects[r][c].getFill()!=endColor){
+                if (!isBorder(rects[r][c]) && !isStartNode(rects[r][c]) && !isEndNode(rects[r][c])){
                     rects[r][c].setFill(backgroundColor);
+                    rects[r][c].setOn(false);
                 }
             }
         }
@@ -1412,15 +1252,6 @@ public class Maze {
         while (!foundEndnode){
             rectsListTemp.clear();
             min = Integer.MAX_VALUE;
-            /*
-            for (int i=0;i<open.size();i++){
-                open.get(i).setG(distance(open.get(i).getR(), open.get(i).getC(), startNodeRow, startNodeCol));
-                open.get(i).setH(distance(open.get(i).getR(), open.get(i).getC(), endNodeRow, endNodeCol));
-                open.get(i).setNum(open.get(i).getH()+open.get(i).getG());
-                board[open.get(i).getR()][open.get(i).getC()] = open.get(i).getH()+open.get(i).getG();
-            }
-
-             */
             for (int i=0;i<open.size();i++){
                 if(open.get(i).getNum()<=min){
                     min = open.get(i).getNum();
@@ -1549,14 +1380,7 @@ public class Maze {
                 }
             }
             sizes.add(rectsList.size());
-            /*
-            if (!foundEndnode && sizes.size()>3 && sizes.get(sizes.size()-1) == sizes.get(sizes.size()-2) && sizes.get(sizes.size()-2)==sizes.get(sizes.size()-3)){
-                rectsList.add(null);
-                break;
-            }
-
-             */
-            if (triple(sizes)){
+            if (stuck(sizes)){
                 rectsList.add(null);
                 break;
             }
@@ -1601,19 +1425,8 @@ public class Maze {
         //print(board);
 
     }
-    public static boolean duplicate(ArrayList<Integer> arr){
-        int temp;
-        for (int i=0;i<arr.size();i++){
-            temp=arr.get(i);
-            for (int z=i+1;z<arr.size();z++){
-                if (arr.get(z)==temp){
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    public static boolean triple(ArrayList<Integer> arr){
+
+    public static boolean stuck(ArrayList<Integer> arr){
         int count;
         int temp;
         for (int i=0;i<arr.size();i++){
@@ -1651,16 +1464,18 @@ public class Maze {
                 for (int c=0;c<rects[r].length;c++) {
                     withinBounds = e.getSceneX() >= rects[r][c].getX() && e.getSceneX() <= rects[r][c].getX() + squareLength && e.getSceneY() >= rects[r][c].getY() && e.getSceneY() <= rects[r][c].getY() + squareLength;
                     if (!e.isSecondaryButtonDown() && withinBounds) {
-                        if (rects[r][c].getFill()==endColor) {
+                        if (isEndNode(rects[r][c])) {
                             rects[r][c].setFill(borderColor);
+                            rects[r][c].setIsEnd(false);
                             rects[r][c].setOn(true);
                             rects[r][c].setOffColor(backgroundColor);
                             rects[r][c].setOnColor(borderColor);
                             //pane.getChildren().add(rects[r][c]);
                             hasEndNode= false;
                         }
-                        if (rects[r][c].getFill()==startColor) {
+                        if (isStartNode(rects[r][c])) {
                             rects[r][c].setFill(borderColor);
+                            rects[r][c].setIsStart(false);
                             rects[r][c].setOn(true);
                             rects[r][c].setOffColor(backgroundColor);
                             rects[r][c].setOnColor(borderColor);
@@ -1677,16 +1492,18 @@ public class Maze {
                 for (int c=0;c<rects[r].length;c++) {
                     withinBounds = e.getSceneX() >= rects[r][c].getX() && e.getSceneX() <= rects[r][c].getX() + squareLength && e.getSceneY() >= rects[r][c].getY() && e.getSceneY() <= rects[r][c].getY() + squareLength;
                     if (e.isSecondaryButtonDown() && withinBounds) {
-                        if (rects[r][c].getFill()==endColor) {
+                        if (isEndNode(rects[r][c])) {
                             rects[r][c].setFill(backgroundColor);
+                            rects[r][c].setIsEnd(false);
                             rects[r][c].setOffColor(backgroundColor);
                             rects[r][c].setOnColor(borderColor);
                             rects[r][c].setOn(false);
                             //pane.getChildren().add(rects[r][c]);
                             hasEndNode=false;
                         }
-                        if (rects[r][c].getFill()==startColor) {
+                        if (isStartNode(rects[r][c])) {
                             rects[r][c].setFill(backgroundColor);
+                            rects[r][c].setIsStart(false);
                             rects[r][c].setOn(false);
                             rects[r][c].setOffColor(backgroundColor);
                             rects[r][c].setOnColor(borderColor);
@@ -1703,7 +1520,7 @@ public class Maze {
         scene.setOnMousePressed(e->{
             for (int r=0;r<rects.length;r++){
                 for (int c=0;c<rects[r].length;c++){
-                    if (rects[r][c].getFill()!=endColor&& rects[r][c].getFill()!=startColor) {
+                    if (!isEndNode(rects[r][c]) && !isStartNode(rects[r][c])) {
                         rects[r][c].setColor();
                     }
                 }
@@ -1717,13 +1534,15 @@ public class Maze {
             for (int r = 0; r < rects.length; r++) {
                 for (int c=0;c<rects[r].length;c++) {
                     withinBounds = e.getSceneX() >= rects[r][c].getX() && e.getSceneX() <= rects[r][c].getX() + squareLength && e.getSceneY() >= rects[r][c].getY() && e.getSceneY() <= rects[r][c].getY() + squareLength;
-                    if (rects[r][c].getFill()!=endColor && !hasStartNode && !e.isSecondaryButtonDown() && withinBounds) {
+                    if (!isEndNode(rects[r][c]) && !hasStartNode && !e.isSecondaryButtonDown() && withinBounds) {
                         rects[r][c] = new Rect(startColor, startColor, rects[r][c].getNum(), rects[r][c].getScene(), rects[r][c].getXpos(), rects[r][c].getYpos(), squareLength);
+                        rects[r][c].setIsStart(true);
                         pane.getChildren().add(rects[r][c]);
                         hasStartNode = true;
                     }
-                    else if (rects[r][c].getFill()==startColor && hasStartNode && e.isSecondaryButtonDown() && withinBounds) {
+                    else if (isStartNode(rects[r][c])&& hasStartNode && e.isSecondaryButtonDown() && withinBounds) {
                         rects[r][c] = new Rect(borderColor, backgroundColor, rects[r][c].getNum(), rects[r][c].getScene(), rects[r][c].getXpos(), rects[r][c].getYpos(), squareLength);
+                        rects[r][c].setIsStart(false);
                         rects[r][c].setColor();
                         pane.getChildren().add(rects[r][c]);
                         hasStartNode = false;
@@ -1739,13 +1558,15 @@ public class Maze {
             for (int r = 0; r < rects.length; r++) {
                 for (int c=0;c<rects[r].length;c++) {
                     withinBounds = e.getSceneX() >= rects[r][c].getX() && e.getSceneX() <= rects[r][c].getX() + squareLength && e.getSceneY() >= rects[r][c].getY() && e.getSceneY() <= rects[r][c].getY() + squareLength;
-                    if (rects[r][c].getFill()!=startColor&& !hasEndNode && !e.isSecondaryButtonDown() && withinBounds) {
+                    if (!isStartNode(rects[r][c])&& !hasEndNode && !e.isSecondaryButtonDown() && withinBounds) {
                         rects[r][c] = new Rect(endColor, endColor, rects[r][c].getNum(), rects[r][c].getScene(), rects[r][c].getXpos(), rects[r][c].getYpos(), squareLength);
+                        rects[r][c].setIsEnd(true);
                         pane.getChildren().add(rects[r][c]);
                         hasEndNode = true;
                     }
-                    else if (rects[r][c].getFill()==endColor && hasEndNode && e.isSecondaryButtonDown() && withinBounds) {
+                    else if (isEndNode(rects[r][c]) && hasEndNode && e.isSecondaryButtonDown() && withinBounds) {
                         rects[r][c] = new Rect(borderColor, backgroundColor, rects[r][c].getNum(), rects[r][c].getScene(), rects[r][c].getXpos(), rects[r][c].getYpos(), squareLength);
+                        rects[r][c].setIsEnd(false);
                         rects[r][c].setColor();
                         pane.getChildren().add(rects[r][c]);
                         hasEndNode = false;
@@ -1756,6 +1577,25 @@ public class Maze {
 
 
     }
+    public boolean isStartNode(Rect rect){
+        return rect.getIsStart();
+    }
+    public boolean isEndNode(Rect rect){
+        return rect.getIsEnd();
+    }
+    public boolean isBorder(Rect rect){
+        if (rect.getOnColor()==borderColor && rect.getOffColor()==backgroundColor && rect.getOn() && !isEndNode(rect) && !isStartNode(rect)){
+            return true;
+        }
+        return false;
+    }
+    public boolean isBackground(Rect rect){
+        if (rect.getOnColor()==borderColor && rect.getOffColor()==backgroundColor && !rect.getOn() && !isEndNode(rect) && !isStartNode(rect)){
+            return true;
+        }
+        return false;
+    }
+
     public void print(int[][] arr){
         for (int[] r: arr){
             for (int c: r){
